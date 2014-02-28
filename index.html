@@ -1,0 +1,19 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<title>Simple authentication to use the Electric Imp.</title>
+<script src = "http://code.jquery.com/jquery-2.0.3.min.js"></script>
+<script src = "main_auth.js"></script>
+</head>
+<body>
+<div id = "content_wrapper">
+<p id= "title"><h1>Welcome to this magnificent example of authentication!</h1></p>
+<p>
+Complete agent url: <input type = "text" id = "agent_url_field"><br>
+Username:<input type = "text" id = "username_field"><br>
+Password:<input type = "password" name = "password_field"><br>
+<button onclick = "sendInitialLoginTransaction()">Login</button>
+</p>
+<p id = 'data'></p>
+</body>
+</html>
