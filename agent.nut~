@@ -102,20 +102,8 @@ function sweep_sessions(){
   }
   imp.wakeup(1200,sweep_sessions);
 }
-function actionRequest(req,token,resp){//decoded request, reauth token, response
- if("logout" in req){
-   logout(req.uid);
-   resp.header("Content-Type", "text/html");//send headers 
-   resp.send(250, "Logged out.");//custom code
-   server.log("Logged out user "+req.uid)
-   return true
- }
- if ("led" in req){
-   switchLED(toInteger(req.led));
- }
-}
+
 function handleHTTPRequest(req, resp){
-resp.header("Access-Control-Allow-Origin", "*");
 if(req.method == "POST"){
 server.log("Request received.")
   local decoded_request = http.jsondecode(req.body);
@@ -126,6 +114,7 @@ server.log("Request received.")
       if(new_user_data){
         local jsonobj = http.jsonencode(new_user_data);
         resp.header("Content-Type","text/json");//parcel up array and send it off
+        resp.header("Access-Control-Allow-Origin", "*");
         resp.send(200, jsonobj);
       }
      else {
@@ -143,7 +132,9 @@ server.log("Request received.")
           local reAuth = reAuthenticate(decoded_request.nonce,decoded_request.uid);
           if(reAuth){
             //call function to check for other stuff in the request here
-            actionRequest(decoded_request, reAuth, resp);
+            //now, just send a response saying all is well
+            resp.header("content-type","text/json");
+            resp.send(200,http.jsonencode(reAuth));//issue a 200 and a new nonce.
           }
           else
             resp.send(451, "Session timed out or invalid nonce.");//send a timeout status code - custom. Using 451         
@@ -154,14 +145,12 @@ server.log("Request received.")
   else {
     resp.send(400,"No newClient index sent");
     server.log("no newclient");
+    
   }
 }}
+
+
 
 sweep_sessions();//expire sessions which are more than 20 mins old.
 http.onrequest(handleHTTPRequest);//bind http request handler
 
-//Auth and HTTP stuff done, now for action code! ===============================
-
-function switchLED(led_state){
-  device.send("LED", led_state);
-}
