@@ -3,3 +3,23 @@
 	float:right;
 	display:block;
 }
+#auth_block {
+	display:block;
+	margin:0 auto;
+	text-align:center;
+}
+
+html{
+	
+}
+#footer{
+	margin:20px auto;
+	text-align:center;
+}
+#title {
+	display:inline;
+	text-align:center;
+	clear:both;
+	text-decoration:underline;
+}
+
