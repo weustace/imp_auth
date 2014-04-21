@@ -8,13 +8,15 @@ correct_username <- "me";
 correct_password <- "password";
 current_user_ids <- [];
 current_user_timings <- [];
+session_expiry_time <- 300;
 function reAuthenticate(usrtoken,uid){
     if (usrtoken != 0){
       if (usrtoken != null){
         uid=uid.tointeger();
         if(uid in current_user_ids){
-        local time_elapsed = clock() - current_user_timings[uid];
-        if(usrtoken == current_user_ids[uid] && time_elapsed < 1200){//we want to expire sessions after 20 mins (1200 secs)
+        local time_elapsed = time() - current_user_timings[uid];
+        server.log("Session age (s): "+ time_elapsed);
+        if(usrtoken == current_user_ids[uid] && time_elapsed < session_expiry_time){//we want to expire sessions after 5 mins (300s)
           //generate new user code
           //assign new user code
           local replacement_user_code = userCodeGen();
@@ -23,7 +25,8 @@ function reAuthenticate(usrtoken,uid){
           return replacement_user_code 
         }       
         else {
-          if(time_elapsed >= 1200){//session expired
+          if(time_elapsed >= session_expiry_time){//session expired
+          server.log("Session expired.");
           current_user_ids[uid] = -1;//set the nonce to -1 to invalidate the login and 
           //flag it for future use.
           }
@@ -78,9 +81,9 @@ function userIDGen(){//this needs to find if any lower number ones are unallocat
 
 function authenticate(username, password){
   if(username == correct_username && password == correct_password){
-    local userData = [userCodeGen(),userIDGen()];
-    current_user_timings.insert(userData[1],time());
-    current_user_ids[userData[1]] = userData[0];//store user nonce and current time in respective arrays. Minimise danger of failure to log out.
+    local userData = {"nonce": userCodeGen(), "uid": userIDGen()};
+    current_user_timings.insert(userData.uid,time());
+    current_user_ids[userData.uid] = userData.nonce;//store user nonce and current time in respective arrays. Minimise danger of failure to log out.
     server.log("authentication successful!");
     return userData
   }
@@ -96,11 +99,12 @@ function logout(uid){
 function sweep_sessions(){
   foreach(uid, time_logged in current_user_timings){
     local time_elapsed = time() - time_logged;
-    if(time_elapsed > 1200){//if sessions older than 10 minutes
+    if(time_elapsed > session_expiry_time){//if sessions older than 10 minutes
       logout(uid);
     }
+    server.log("Sessions swept.");
   }
-  imp.wakeup(1200,sweep_sessions);
+  imp.wakeup(120,sweep_sessions);//sweep sessions every two minutes
 }
 function actionRequest(req,token,resp){//decoded request, reauth token, response
  if("logout" in req){
@@ -111,13 +115,25 @@ function actionRequest(req,token,resp){//decoded request, reauth token, response
    return true
  }
  if ("led" in req){
-   switchLED(toInteger(req.led));
+   if(req.led == "?"){
+    resp.header("Content-Type", "text/json");
+    local response_data = {"nonce":token, "led":current_status};
+    response_data = http.jsonencode(response_data);
+    resp.send(200,response_data);
+   }
+   else{
+    switchLED(req.led.tointeger());
+    resp.header("Content-Type","text/json");
+    local response_data = {"nonce":token, "led":current_status};
+    response_data = http.jsonencode(response_data);
+    resp.send(200, response_data);}
+    
  }
 }
 function handleHTTPRequest(req, resp){
+  server.log(http.jsonencode(req.body));
 resp.header("Access-Control-Allow-Origin", "*");
 if(req.method == "POST"){
-server.log("Request received.")
   local decoded_request = http.jsondecode(req.body);
     if("newClient" in decoded_request){//if this isn't there, it's a malformed request. I say so.
     if(decoded_request.newClient == "true" && "username" in decoded_request && "password" in decoded_request){//if it's a new user and they haven't sent a username and password... bad request
@@ -142,6 +158,7 @@ server.log("Request received.")
         if("uid" in decoded_request && "nonce" in decoded_request){
           local reAuth = reAuthenticate(decoded_request.nonce,decoded_request.uid);
           if(reAuth){
+            server.log("reauth success");
             //call function to check for other stuff in the request here
             actionRequest(decoded_request, reAuth, resp);
           }
@@ -164,4 +181,9 @@ http.onrequest(handleHTTPRequest);//bind http request handler
 
 function switchLED(led_state){
   device.send("LED", led_state);
+  current_status = led_state;
+  if(current_status == 1){
+    server.log("On");
+  }
+  else server.log("Off");
 }
