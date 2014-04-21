@@ -1,6 +1,6 @@
 /* Authentication servo code - William Eustace 16.1.14.
-ALMOST CERTAINLY NOT CRYPTOGRAPHICALLY SECURE - USES OPEN AUTHENTICATION AND CODE DOUBTLESS HAS HOLES. Even worse, it doesn't use any recognised cryptographic algorithm
-for its nonces!
+ALMOST CERTAINLY NOT CRYPTOGRAPHICALLY SECURE - CODE DOUBTLESS HAS HOLES. Even worse, it doesn't use any recognised cryptographic algorithm
+for its tokens!
 USE AT YOUR OWN RISK - NOT FOR IMPORTANT THINGS */
 
 local current_status = 0;
@@ -120,14 +120,16 @@ function actionRequest(req,token,resp){//decoded request, reauth token, response
     local response_data = {"nonce":token, "led":current_status};
     response_data = http.jsonencode(response_data);
     resp.send(200,response_data);
+	return true
    }
    else{
     switchLED(req.led.tointeger());
     resp.header("Content-Type","text/json");
     local response_data = {"nonce":token, "led":current_status};
     response_data = http.jsonencode(response_data);
-    resp.send(200, response_data);}
-    
+    resp.send(200, response_data);
+	return true
+	}
  }
 }
 function handleHTTPRequest(req, resp){
@@ -160,7 +162,12 @@ if(req.method == "POST"){
           if(reAuth){
             server.log("reauth success");
             //call function to check for other stuff in the request here
-            actionRequest(decoded_request, reAuth, resp);
+            if(!actionRequest(decoded_request, reAuth, resp)){
+				resp.header("Content-Type", "text/json");
+				local jsonobj = {"nonce": reAuth};
+				jsonobj = http.jsonencode(jsonobj);
+				resp.send(200,jsonobj);
+			}
           }
           else
             resp.send(451, "Session timed out or invalid nonce.");//send a timeout status code - custom. Using 451         
