@@ -4,8 +4,8 @@ for its tokens!
 USE AT YOUR OWN RISK - NOT FOR IMPORTANT THINGS */
 
 local current_status = 0;
-correct_username <- "me";
-correct_password <- "password";
+correct_username <- "demo_user";
+correct_password <- "really_secure";
 current_user_ids <- [];
 current_user_timings <- [];
 session_expiry_time <- 300;
@@ -99,7 +99,7 @@ function logout(uid){
 function sweep_sessions(){
   foreach(uid, time_logged in current_user_timings){
     local time_elapsed = time() - time_logged;
-    if(time_elapsed > session_expiry_time){//if sessions older than 10 minutes
+    if(time_elapsed > session_expiry_time && time_logged != -1){//if sessions older than 10 minutes
       logout(uid);
     }
     server.log("Sessions swept.");

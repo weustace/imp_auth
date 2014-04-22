@@ -34,27 +34,32 @@ function sendInitialLoginTransaction(){
 	data:JSON.stringify(query_object),
 	type:'POST',
 	complete:handleInitialLoginResponse,
+	timeout:2000
 	});
 }
 
-function handleInitialLoginResponse(event,req){
+function handleInitialLoginResponse(event,desc){
 	if(event.status==200){
 		var respObj = JSON.parse(event.responseText);
-		UID = respObj.uid;
-		nonce = respObj.nonce.toString();//store our response object stuff in global vars
-	
-		//clear the user interface
-		$("#auth_block").slideUp("slow");
-		//show a new pane, containing whatever you want to do after auth.
-		$("#after_auth").slideDown("slow");
-		$("#logout_button").click(logout);//register logout button handler
-		$("#password_field").val("");
-		//update led state
-		checkLEDStatus();
+		if(typeof respObj.uid != undefined){
+			UID = respObj.uid;
+			nonce = respObj.nonce.toString();//store our response object stuff in global vars
+		
+			//clear the user interface
+			$("#auth_block").slideUp("slow");
+			//show a new pane, containing whatever you want to do after auth.
+			$("#after_auth").slideDown("slow");
+			$("#logout_button").click(logout);//register logout button handler
+			$("#password_field").val("");
+			//update led state
+			checkLEDStatus();
+		}
+		else alert("Valid response but bad data returned. Wrong URL?");
 	}
 	else{
-		if(event.status == 401)
-			alert("Authentication failed - wrong username or password.");
+		if(event.status == 401){
+			alert("Authentication failed - wrong username or password.");}
+		else alert("Failure. Try other URL?");
 	}
 }
 function logout(){
